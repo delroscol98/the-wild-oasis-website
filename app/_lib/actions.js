@@ -6,7 +6,9 @@ import {
   deleteBooking,
   getBookings,
   updateGuest as updateGuestApi,
+  updateBooking as updateBookingApi,
 } from "./data-service";
+import { redirect } from "next/navigation";
 
 export async function updateGuest(formData) {
   const session = await auth();
@@ -23,6 +25,29 @@ export async function updateGuest(formData) {
   updateGuestApi(session.user.guestId, updateData);
 
   revalidatePath("/account/profile");
+}
+
+export async function updateBooking(formData) {
+  const session = await auth();
+  if (!session) throw new Error("You must be logged in");
+
+  const guestBookings = await getBookings(session.user.guestId);
+  const guestBookingIds = guestBookings.map((booking) => booking.id);
+
+  const bookingId = Number(formData.get("bookingId"));
+  const numGuests = Number(formData.get("numGuests"));
+  const observations = formData.get("observations");
+
+  const updateData = { numGuests, observations };
+
+  if (!guestBookingIds.includes(bookingId))
+    throw new Error("You are not allowed to update this booking");
+
+  updateBookingApi(bookingId, updateData);
+
+  revalidatePath(`/account/reservations/edit/${bookingId}`);
+
+  redirect("/account/reservations");
 }
 
 export async function deleteReservation(bookingId) {
